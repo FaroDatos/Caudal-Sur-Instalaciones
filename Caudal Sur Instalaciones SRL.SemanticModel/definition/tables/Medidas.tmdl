@@ -1,0 +1,252 @@
+/// Tabla solo para medidas del informe.
+table Medidas
+	lineageTag: f0ab3856-145b-4431-aa69-73d457e01107
+
+	/// Gastos válidos (facturas menos notas de crédito), en pesos corrientes.
+	measure Gastos = SUM ( gastos_sistema[Importe] )
+		formatString: \$ #,0
+		displayFolder: 1. Gastos
+		lineageTag: 0f56758e-7453-48ec-bb7e-c47dd934a6d4
+
+	measure Comprobantes = COUNTROWS ( gastos_sistema )
+		formatString: #,0
+		displayFolder: 1. Gastos
+		lineageTag: c9ab7e24-8e05-436c-9798-f48c380e00d3
+
+	/// Importe de notas de crédito (negativo).
+	measure 'Notas de crédito' = CALCULATE ( [Gastos], gastos_sistema[Tipo Comprobante] = "Nota de crédito" )
+		formatString: \$ #,0
+		displayFolder: 1. Gastos
+		lineageTag: ef45ee8a-5261-491e-aaf4-eec275a4cb1d
+
+	/// Comprobantes separados para corregir (sin obra o importe ilegible). No están en [Gastos].
+	measure 'Gastos observados' = SUM ( Gastos_Observados[Importe] )
+		formatString: \$ #,0
+		displayFolder: 1. Gastos
+		lineageTag: 53d8deec-b2d9-40b2-b605-ff8c7491b886
+
+	measure 'Comprobantes observados' = COUNTROWS ( Gastos_Observados )
+		formatString: #,0
+		displayFolder: 1. Gastos
+		lineageTag: c78d9a4e-7055-4c2d-bfa7-9454a8f49d7e
+
+	/// Certificados emitidos, por fecha de emisión.
+	measure Certificado = SUM ( Certificaciones[Importe] )
+		formatString: \$ #,0
+		displayFolder: 2. Certificaciones
+		lineageTag: 7f30ce12-d719-4a9c-89c3-0e345ef9b12f
+
+	/// Cobros, por fecha de cobro (usa la relación inactiva con Calendario).
+	measure Cobrado =
+			CALCULATE (
+			    SUM ( Certificaciones[Importe] ),
+			    USERELATIONSHIP ( Certificaciones[Fecha cobro], Calendario[Fecha] ),
+			    NOT ISBLANK ( Certificaciones[Fecha cobro] )
+			)
+		formatString: \$ #,0
+		displayFolder: 2. Certificaciones
+		lineageTag: 22076f58-8305-40ea-8f79-eed5e997e538
+
+	/// De lo certificado en el período, lo que todavía no se cobró (Pendiente + Reclamado, DQ-37).
+	measure 'Pendiente de cobro' = CALCULATE ( [Certificado], Certificaciones[Estado cobro] = "Pendiente de cobro" )
+		formatString: \$ #,0
+		displayFolder: 2. Certificaciones
+		lineageTag: b25301ae-6a79-4342-8e4f-f3010ea32a45
+
+	/// Deuda de clientes al cierre del período: todo lo certificado hasta esa fecha menos todo lo cobrado hasta esa fecha.
+	measure 'Saldo a cobrar' =
+			VAR _fin = MAX ( Calendario[Fecha] )
+			RETURN
+			    CALCULATE (
+			        [Certificado] - [Cobrado],
+			        REMOVEFILTERS ( Calendario ),
+			        Calendario[Fecha] <= _fin
+			    )
+		formatString: \$ #,0
+		displayFolder: 2. Certificaciones
+		lineageTag: 79a67b26-5f6b-4ff0-aa98-57272ec48839
+
+	/// Parte de lo certificado en el período que ya se cobró.
+	measure '% Cobrado' = DIVIDE ( [Certificado] - [Pendiente de cobro], [Certificado] )
+		formatString: 0.0 %
+		displayFolder: 2. Certificaciones
+		lineageTag: 9e76aab2-3793-488b-ab68-4e6e2474dc66
+
+	/// Días entre emisión y cobro, de los certificados cobrados.
+	measure 'Días promedio de cobro' =
+			AVERAGEX (
+			    FILTER ( Certificaciones, NOT ISBLANK ( Certificaciones[Fecha cobro] ) ),
+			    DATEDIFF ( Certificaciones[Fecha emisión], Certificaciones[Fecha cobro], DAY )
+			)
+		formatString: #,0
+		displayFolder: 2. Certificaciones
+		lineageTag: 95ef73a7-c90d-452f-a402-485cd1d12099
+
+	/// Certificado menos gastos, en pesos corrientes.
+	measure 'Margen bruto' = [Certificado] - [Gastos]
+		formatString: \$ #,0
+		displayFolder: 3. Rentabilidad
+		lineageTag: e2fa671f-9123-4b90-a5bb-979652a9573c
+
+	measure 'Margen %' = DIVIDE ( [Margen bruto], [Certificado] )
+		formatString: 0.0 %
+		displayFolder: 3. Rentabilidad
+		lineageTag: 3bf693ea-43da-46d1-8d83-80399d700f3d
+
+	/// Índice CAC del último mes del período. Si ese mes no tiene índice, usa el último disponible (DQ-47).
+	measure 'Índice CAC' =
+			VAR _fin = MAX ( Calendario[Fecha] )
+			VAR _ult =
+			    CALCULATE ( MAX ( indice_cac[Período] ), REMOVEFILTERS ( Calendario ), indice_cac[Período] <= _fin )
+			RETURN
+			    CALCULATE ( MAX ( indice_cac[Indice_CAC] ), REMOVEFILTERS ( Calendario ), indice_cac[Período] = _ult )
+		formatString: #,0.0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: 49145cad-6f9b-4eaf-8891-51feb0e5c27f
+
+	/// Presupuesto de costo a valores del mes base de cada obra.
+	measure 'Presupuesto costo (base)' = SUM ( Obras[Presupuesto costo (base)] )
+		formatString: \$ #,0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: 209e0ab1-8179-4518-b547-1222f5dfd776
+
+	/// Precio de contrato a valores del mes base de cada obra.
+	measure 'Precio contrato (base)' = SUM ( Obras[Precio contrato (base)] )
+		formatString: \$ #,0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: ba9d5306-c106-4e8c-806d-0797c357bd7b
+
+	/// Presupuesto de costo llevado al índice CAC del período.
+	measure 'Presupuesto costo actualizado' =
+			VAR _idx = [Índice CAC]
+			RETURN
+			    SUMX (
+			        Obras,
+			        Obras[Presupuesto costo (base)]
+			            * DIVIDE ( _idx, LOOKUPVALUE ( indice_cac[Indice_CAC], indice_cac[Período], Obras[Mes base CAC] ) )
+			    )
+		formatString: \$ #,0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: a270b1ac-7bba-4c71-9926-3ef843a44253
+
+	/// Precio de contrato llevado al índice CAC del período.
+	measure 'Precio contrato actualizado' =
+			VAR _idx = [Índice CAC]
+			RETURN
+			    SUMX (
+			        Obras,
+			        Obras[Precio contrato (base)]
+			            * DIVIDE ( _idx, LOOKUPVALUE ( indice_cac[Indice_CAC], indice_cac[Período], Obras[Mes base CAC] ) )
+			    )
+		formatString: \$ #,0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: 07fa9084-4e73-40a3-a4db-17e7f1081846
+
+	/// Cada gasto deflactado al mes base de su obra con el índice CAC, para compararlo con el presupuesto base.
+	measure 'Gastos a valores base' =
+			SUMX (
+			    gastos_sistema,
+			    VAR _mes = DATE ( YEAR ( gastos_sistema[Fecha] ), MONTH ( gastos_sistema[Fecha] ), 1 )
+			    VAR _idxMes =
+			        MAXX (
+			            TOPN ( 1, FILTER ( ALL ( indice_cac ), indice_cac[Período] <= _mes ), indice_cac[Período], DESC ),
+			            indice_cac[Indice_CAC]
+			        )
+			    VAR _idxBase = LOOKUPVALUE ( indice_cac[Indice_CAC], indice_cac[Período], RELATED ( Obras[Mes base CAC] ) )
+			    RETURN gastos_sistema[Importe] * DIVIDE ( _idxBase, _idxMes )
+			)
+		formatString: \$ #,0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: 1ae20115-a402-4f20-a4f2-bd12680460fd
+
+	/// Gasto real (a valores base) menos presupuesto devengado según el avance real. Positivo = sobrecosto. Usar por obra o total, sin filtrar por mes.
+	measure 'Desvío de costo' = [Gastos a valores base] - [Presupuesto devengado]
+		formatString: \$ #,0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: 68e9edb1-671f-420e-85f3-c0e7c023f29c
+
+	/// Desvío de costo sobre el presupuesto devengado. Positivo = sobrecosto.
+	measure 'Desvío de costo %' = DIVIDE ( [Desvío de costo], [Presupuesto devengado] )
+		formatString: +0.0 %;-0.0 %;0.0 %
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: 116be29a-3ed4-4c59-9722-1ab1bd6db6d4
+
+	/// Avance real al último mes del período. Con varias obras, promedio ponderado por precio de contrato.
+	measure '% Avance real' =
+			VAR _t =
+			    ADDCOLUMNS (
+			        VALUES ( Avance[Obra] ),
+			        "@pct",
+			            VAR _ult = CALCULATE ( MAX ( Avance[Mes] ) )
+			            RETURN CALCULATE ( MAX ( Avance[% Real] ), Avance[Mes] = _ult ),
+			        "@peso", LOOKUPVALUE ( Obras[Precio contrato (base)], Obras[Código], Avance[Obra] )
+			    )
+			RETURN
+			    DIVIDE ( SUMX ( _t, [@pct] * [@peso] ), SUMX ( _t, [@peso] ) )
+		formatString: 0.0 %
+		displayFolder: 5. Avance
+		lineageTag: d19dad65-c0fa-4273-a52c-24c12920f7a8
+
+	/// Avance planificado al último mes del período. Con varias obras, promedio ponderado por precio de contrato.
+	measure '% Avance planificado' =
+			VAR _t =
+			    ADDCOLUMNS (
+			        VALUES ( Avance[Obra] ),
+			        "@pct",
+			            VAR _ult = CALCULATE ( MAX ( Avance[Mes] ) )
+			            RETURN CALCULATE ( MAX ( Avance[% Planificado] ), Avance[Mes] = _ult ),
+			        "@peso", LOOKUPVALUE ( Obras[Precio contrato (base)], Obras[Código], Avance[Obra] )
+			    )
+			RETURN
+			    DIVIDE ( SUMX ( _t, [@pct] * [@peso] ), SUMX ( _t, [@peso] ) )
+		formatString: 0.0 %
+		displayFolder: 5. Avance
+		lineageTag: 62e3dd37-6e37-47dd-8e3e-fff21bd72fda
+
+	/// Real menos planificado. Negativo = obra atrasada.
+	measure 'Desvío de avance' = [% Avance real] - [% Avance planificado]
+		formatString: +0.0 %;-0.0 %;0.0 %
+		displayFolder: 5. Avance
+		lineageTag: f6ee9d3f-5155-478a-b981-fc3d6dcd225a
+
+	/// Presupuesto de costo (base) proporcional al % de avance real de cada obra. Es lo que debería haberse gastado hasta ahora.
+	measure 'Presupuesto devengado' =
+			SUMX (
+			    Obras,
+			    VAR _ult = CALCULATE ( MAX ( Avance[Mes] ) )
+			    VAR _pct = CALCULATE ( MAX ( Avance[% Real] ), Avance[Mes] = _ult )
+			    RETURN Obras[Presupuesto costo (base)] * _pct
+			)
+		formatString: \$ #,0
+		displayFolder: 4. Presupuesto y CAC
+		lineageTag: a65f118e-0757-4772-8ddb-d3810fcb235a
+
+	/// Cantidad de obras con Estado = "En curso".
+	measure 'Obras en curso' = CALCULATE ( COUNTROWS ( Obras ), Obras[Estado] = "En curso" )
+		formatString: 0
+		displayFolder: 5. Avance
+		lineageTag: 54489d1c-382b-484d-b776-0cdb44dba302
+
+	/// Filas exportadas del sistema en gastos_sistema.csv, antes de la limpieza (dato fijo del proceso, DQ-01 a DQ-03).
+	measure 'Filas del sistema' = 1756
+		formatString: #,0
+		displayFolder: 6. Calidad de datos
+		lineageTag: 11a4e05c-dce9-4dc4-812d-05586eb23253
+
+	/// Problemas del registro de calidad resueltos sobre el total (Documentacion\Registro_calidad_datos.xlsx).
+	measure 'Problemas de calidad resueltos' = "49 / 49"
+		displayFolder: 6. Calidad de datos
+		lineageTag: 0c35eed5-e8bd-4e2a-8f25-35a8d8609583
+
+	column Medidas
+		dataType: int64
+		isHidden
+		lineageTag: bf5ad20f-9dd4-4679-89dd-a498900bc3df
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Medidas]
+
+	partition Medidas = calculated
+		mode: import
+		source = ROW ( "Medidas", BLANK () )
+

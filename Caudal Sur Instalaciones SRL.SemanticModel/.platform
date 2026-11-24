@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "Caudal Sur Instalaciones SRL"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "8186c878-9a7b-4bcb-8184-4526ef1c1bf3"
+  }
+}

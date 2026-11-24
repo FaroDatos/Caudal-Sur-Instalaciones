@@ -1,0 +1,8 @@
+# Power BI Project: archivos locales y caché que no se versionan
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+# Respaldos binarios
+*.pbix
+~$*
+# Copia recuperada del 23/11 (respaldo local, no se versiona)
+*(recuperado*

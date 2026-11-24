@@ -1,0 +1,42 @@
+table rubros
+	lineageTag: 488dcb0e-ddd0-49aa-8c9a-689aa7825fd6
+
+	column ID_Rubro
+		dataType: string
+		lineageTag: 64963128-6970-4a1c-93c9-d85f2ad1c3ae
+		summarizeBy: none
+		sourceColumn: ID_Rubro
+
+		annotation SummarizationSetBy = Automatic
+
+	column Rubro
+		dataType: string
+		lineageTag: 994bac00-88e0-4a91-9dcc-4d9c41566630
+		summarizeBy: none
+		sourceColumn: Rubro
+
+		annotation SummarizationSetBy = Automatic
+
+	column Categoria
+		dataType: string
+		lineageTag: 285247fd-534a-4e03-a639-5ed6b861307b
+		summarizeBy: none
+		sourceColumn: Categoria
+
+		annotation SummarizationSetBy = Automatic
+
+	partition rubros = m
+		mode: import
+		source =
+				let
+				    Origen = Csv.Document(File.Contents("F:\FaroDatos\Proyecyos Portfolio\Caudal Sur Instalaciones SRL\Datos crudos\rubros.csv"),[Delimiter=",", Columns=3, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    // QuoteStyle.Csv: respeta las comillas, así "Rociadores, válvulas y equipos" no se corta en la coma
+				    #"DQ-48 Encabezados promovidos" = Table.PromoteHeaders(Origen, [PromoteAllScalars=true]),
+				    #"Tipo cambiado" = Table.TransformColumnTypes(#"DQ-48 Encabezados promovidos",{{"ID_Rubro", type text}, {"Rubro", type text}, {"Categoria", type text}})
+				in
+				    #"Tipo cambiado"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navegación
+

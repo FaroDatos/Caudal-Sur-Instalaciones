@@ -1,0 +1,143 @@
+table Obras
+	lineageTag: bdfe58c1-3eb5-4c1b-8b6f-49f00db53820
+
+	column Código
+		dataType: string
+		lineageTag: 5ecb026a-8b77-4739-85a1-45dba4f7cbfd
+		summarizeBy: none
+		sourceColumn: Código
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Nombre de obra'
+		dataType: string
+		lineageTag: e4e1c7d7-9a8a-401b-86c6-352184c78a36
+		summarizeBy: none
+		sourceColumn: Nombre de obra
+
+		annotation SummarizationSetBy = Automatic
+
+	column Tipo
+		dataType: string
+		lineageTag: 87ea712f-a52e-4145-815d-d54b66acff2d
+		summarizeBy: none
+		sourceColumn: Tipo
+
+		annotation SummarizationSetBy = Automatic
+
+	column Cliente
+		dataType: string
+		lineageTag: 73c20e2f-7388-4277-b8fe-734de6bad913
+		summarizeBy: none
+		sourceColumn: Cliente
+
+		annotation SummarizationSetBy = Automatic
+
+	column Barrio
+		dataType: string
+		lineageTag: 78312607-26ad-4cbe-afcd-c1d5ce267e75
+		summarizeBy: none
+		sourceColumn: Barrio
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Superficie (m2)'
+		dataType: int64
+		formatString: 0
+		lineageTag: 15e89c7b-fc42-40f9-87df-d90a23945195
+		summarizeBy: sum
+		sourceColumn: Superficie (m2)
+
+		annotation SummarizationSetBy = Automatic
+
+	column Inicio
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: da611fdf-f807-4597-8baa-3b83eb5efa72
+		summarizeBy: none
+		sourceColumn: Inicio
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Fin previsto'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 7132984b-e03a-4469-981b-661fa983527f
+		summarizeBy: none
+		sourceColumn: Fin previsto
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Presupuesto costo (base)'
+		dataType: double
+		lineageTag: c1d3c200-6081-4501-8830-5db1bfd650d8
+		summarizeBy: sum
+		sourceColumn: Presupuesto costo (base)
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column 'Precio contrato (base)'
+		dataType: double
+		formatString: 0
+		lineageTag: f6c4d717-309b-4cce-b7f4-4ee572b09e7e
+		summarizeBy: sum
+		sourceColumn: Precio contrato (base)
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Mes base CAC'
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 9e484fc6-9fbe-479f-8908-cc792202df95
+		summarizeBy: none
+		sourceColumn: Mes base CAC
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Estado
+		dataType: string
+		lineageTag: 2bcfadea-ba40-40aa-b104-084afbe1195b
+		summarizeBy: none
+		sourceColumn: Estado
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Obras = m
+		mode: import
+		source =
+				let
+				    Origen = Excel.Workbook(File.Contents("F:\FaroDatos\Proyecyos Portfolio\Caudal Sur Instalaciones SRL\Datos crudos\obras.xlsx"), null, true),
+				    Obras_Sheet = Origen{[Item="Obras",Kind="Sheet"]}[Data],
+				    #"DQ-16 Quitas filas del título" = Table.Skip(Obras_Sheet,3),
+				    #"DQ-16 Promover encabezados" = Table.PromoteHeaders(#"DQ-16 Quitas filas del título", [PromoteAllScalars=true]),
+				    #"DQ-26 DQ-27 Tipo cambiado" = Table.TransformColumnTypes(#"DQ-16 Promover encabezados",{{"Código", type text}, {"Nombre de obra", type text}, {"Tipo", type text}, {"Cliente", type text}, {"Barrio", type text}, {"Superficie", type any}, {"Inicio", type any}, {"Fin previsto", type any}, {"Presupuesto costo (base)", type number}, {"Precio contrato (base)", type number}, {"Mes base CAC", type date}, {"Estado", type text}}),
+				    #"DQ-17 Filtrar filas de pie" = Table.SelectRows(#"DQ-26 DQ-27 Tipo cambiado", each Text.StartsWith([Código], "OB-")),
+				    #"DQ-18 Quitar obra duplicada" = Table.Distinct(#"DQ-17 Filtrar filas de pie", {"Código"}),
+				    #"DQ-22 Barrio mayúscula inicial" = Table.TransformColumns(#"DQ-18 Quitar obra duplicada",{{"Barrio", Text.Proper, type text}}),
+				    #"DQ-23 superficie a texto" = Table.TransformColumnTypes(#"DQ-22 Barrio mayúscula inicial",{{"Superficie", type text}}),
+				    #"DQ-23 quitar m²" = Table.ReplaceValue(#"DQ-23 superficie a texto","m²","",Replacer.ReplaceText,{"Superficie"}),
+				    #"DQ-23 quitar m2" = Table.ReplaceValue(#"DQ-23 quitar m²","m2","",Replacer.ReplaceText,{"Superficie"}),
+				    #"DQ-22 Texto recortado" = Table.TransformColumns(#"DQ-23 quitar m2",{{"Superficie", Text.Trim, type text}}),
+				    #"Tipo cambiado ARG" = Table.TransformColumnTypes(#"DQ-22 Texto recortado", {{"Superficie", Int64.Type}}, "es-AR"),
+				    #"DQ-23 Renombrar superficie" = Table.RenameColumns(#"Tipo cambiado ARG", {{"Superficie", "Superficie (m2)"}}),
+				    #"DQ-24 DQ-25 Fechas a tipo fecha" = Table.TransformColumnTypes(#"DQ-23 Renombrar superficie", {{"Inicio", type date}, {"Fin previsto", type date}}, "es-AR"),
+				    #"DQ-20 tipo RED CONTRA INCENDIO" = Table.ReplaceValue(#"DQ-24 DQ-25 Fechas a tipo fecha","RED CONTRA INCENDIO","Red contra incendio",Replacer.ReplaceText,{"Tipo"}),
+				    #"DQ-20 tipo INSTALACIÓN SANITARIA" = Table.ReplaceValue(#"DQ-20 tipo RED CONTRA INCENDIO","INSTALACIÓN SANITARIA","Instalación sanitaria",Replacer.ReplaceText,{"Tipo"}),
+				    #"DQ-21 tipo sinónimo Incendio" = Table.ReplaceValue(#"DQ-20 tipo INSTALACIÓN SANITARIA","Incendio","Red contra incendio",Replacer.ReplaceText,{"Tipo"}),
+				    #"DQ-22 Barrio recortado" = Table.TransformColumns(#"DQ-21 tipo sinónimo Incendio",{{"Barrio", Text.Trim, type text}}),
+				    #"DQ-19 Nombre de obra recortado" = Table.TransformColumns(#"DQ-22 Barrio recortado",{{"Nombre de obra", Text.Trim, type text}})
+				in
+				    #"DQ-19 Nombre de obra recortado"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
+
