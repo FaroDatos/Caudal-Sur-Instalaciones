@@ -171,34 +171,42 @@ table Medidas
 		displayFolder: 4. Presupuesto y CAC
 		lineageTag: 116be29a-3ed4-4c59-9722-1ab1bd6db6d4
 
-	/// Avance real al último mes del período. Con varias obras, promedio ponderado por precio de contrato.
+	/// Avance real de la cartera al cierre del período: cada obra aporta su último avance informado hasta esa fecha (las no iniciadas cuentan 0 %), ponderado por precio de contrato. Con una obra elegida, el avance de esa obra.
 	measure '% Avance real' =
+			VAR _fin = MAX ( Calendario[Fecha] )
+			VAR _inicio = MIN ( Calendario[Fecha] )
+			VAR _ultDato = CALCULATE ( MAX ( Avance[Mes] ), REMOVEFILTERS ( Calendario ) )
 			VAR _t =
 			    ADDCOLUMNS (
-			        VALUES ( Avance[Obra] ),
+			        VALUES ( Obras[Código] ),
+			        "@peso", CALCULATE ( SUM ( Obras[Precio contrato (base)] ) ),
 			        "@pct",
-			            VAR _ult = CALCULATE ( MAX ( Avance[Mes] ) )
-			            RETURN CALCULATE ( MAX ( Avance[% Real] ), Avance[Mes] = _ult ),
-			        "@peso", LOOKUPVALUE ( Obras[Precio contrato (base)], Obras[Código], Avance[Obra] )
+			            VAR _ult = CALCULATE ( MAX ( Avance[Mes] ), REMOVEFILTERS ( Calendario ), Avance[Mes] <= _fin )
+			            RETURN IF ( ISBLANK ( _ult ), 0, CALCULATE ( MAX ( Avance[% Real] ), REMOVEFILTERS ( Calendario ), Avance[Mes] = _ult ) )
 			    )
+			VAR _hayDato = CALCULATE ( COUNTROWS ( Avance ), REMOVEFILTERS ( Calendario ), Avance[Mes] <= _fin )
 			RETURN
-			    DIVIDE ( SUMX ( _t, [@pct] * [@peso] ), SUMX ( _t, [@peso] ) )
+			    IF ( _hayDato > 0 && _inicio <= _ultDato, DIVIDE ( SUMX ( _t, [@pct] * [@peso] ), SUMX ( _t, [@peso] ) ) )
 		formatString: 0.0 %
 		displayFolder: 5. Avance
 		lineageTag: d19dad65-c0fa-4273-a52c-24c12920f7a8
 
-	/// Avance planificado al último mes del período. Con varias obras, promedio ponderado por precio de contrato.
+	/// Avance planificado de la cartera al cierre del período: cada obra aporta su último valor planificado hasta esa fecha (las no iniciadas cuentan 0 %), ponderado por precio de contrato. Con una obra elegida, el plan de esa obra.
 	measure '% Avance planificado' =
+			VAR _fin = MAX ( Calendario[Fecha] )
+			VAR _inicio = MIN ( Calendario[Fecha] )
+			VAR _ultDato = CALCULATE ( MAX ( Avance[Mes] ), REMOVEFILTERS ( Calendario ) )
 			VAR _t =
 			    ADDCOLUMNS (
-			        VALUES ( Avance[Obra] ),
+			        VALUES ( Obras[Código] ),
+			        "@peso", CALCULATE ( SUM ( Obras[Precio contrato (base)] ) ),
 			        "@pct",
-			            VAR _ult = CALCULATE ( MAX ( Avance[Mes] ) )
-			            RETURN CALCULATE ( MAX ( Avance[% Planificado] ), Avance[Mes] = _ult ),
-			        "@peso", LOOKUPVALUE ( Obras[Precio contrato (base)], Obras[Código], Avance[Obra] )
+			            VAR _ult = CALCULATE ( MAX ( Avance[Mes] ), REMOVEFILTERS ( Calendario ), Avance[Mes] <= _fin )
+			            RETURN IF ( ISBLANK ( _ult ), 0, CALCULATE ( MAX ( Avance[% Planificado] ), REMOVEFILTERS ( Calendario ), Avance[Mes] = _ult ) )
 			    )
+			VAR _hayDato = CALCULATE ( COUNTROWS ( Avance ), REMOVEFILTERS ( Calendario ), Avance[Mes] <= _fin )
 			RETURN
-			    DIVIDE ( SUMX ( _t, [@pct] * [@peso] ), SUMX ( _t, [@peso] ) )
+			    IF ( _hayDato > 0 && _inicio <= _ultDato, DIVIDE ( SUMX ( _t, [@pct] * [@peso] ), SUMX ( _t, [@peso] ) ) )
 		formatString: 0.0 %
 		displayFolder: 5. Avance
 		lineageTag: 62e3dd37-6e37-47dd-8e3e-fff21bd72fda

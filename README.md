@@ -75,7 +75,7 @@ Las medidas están en una tabla aparte, organizadas en carpetas:
 - **Certificaciones**: certificado, cobrado, pendiente de cobro, saldo a cobrar acumulado al cierre de cada mes, % cobrado y días promedio de cobro.
 - **Rentabilidad**: margen bruto y margen %.
 - **Presupuesto y CAC**: índice CAC del período, presupuesto y precio de contrato actualizados, gastos a valores base, presupuesto devengado y desvío de costo.
-- **Avance**: avance real, avance planificado y desvío, ponderados por precio de contrato cuando se mira más de una obra.
+- **Avance**: avance real, avance planificado y desvío. Con varias obras es el avance acumulado de toda la cartera: cada obra aporta su último avance informado (las terminadas, 100 %; las que no empezaron, 0 %), ponderado por su precio de contrato. Por eso la curva nunca baja y su último mes coincide con las tarjetas.
 
 Dos decisiones importantes:
 
