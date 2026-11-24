@@ -1,0 +1,68 @@
+table indice_cac
+	lineageTag: f50a9909-c87f-4061-8310-d2e2f4f2620e
+
+	column Anio
+		dataType: int64
+		formatString: 0
+		lineageTag: c3a9a02e-7cb8-46d8-b794-aeaaedeb73ff
+		summarizeBy: sum
+		sourceColumn: Anio
+
+		annotation SummarizationSetBy = Automatic
+
+	column Mes
+		dataType: int64
+		formatString: 0
+		lineageTag: 79ec2966-3b18-4424-98e8-48c3f4f431ca
+		summarizeBy: sum
+		sourceColumn: Mes
+
+		annotation SummarizationSetBy = Automatic
+
+	column Indice_CAC
+		dataType: double
+		formatString: 0
+		lineageTag: 9a941b5c-7314-4d60-8e85-d035036dfbcd
+		summarizeBy: sum
+		sourceColumn: Indice_CAC
+
+		annotation SummarizationSetBy = Automatic
+
+	column Fuente
+		dataType: string
+		lineageTag: 5f3dd242-4d6e-40ba-ba9c-d88528776520
+		summarizeBy: none
+		sourceColumn: Fuente
+
+		annotation SummarizationSetBy = Automatic
+
+	column Período
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 22d07ae9-7d30-4b9c-835e-95bef00a67f2
+		summarizeBy: none
+		sourceColumn: Período
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition indice_cac = m
+		mode: import
+		source =
+				let
+				    Origen = Csv.Document(File.Contents("F:\FaroDatos\Proyecyos Portfolio\Caudal Sur Instalaciones SRL\Datos crudos\indice_cac.csv"),[Delimiter=",", Columns=4, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    // QuoteStyle.Csv: la Fuente "Derivado: oct-25 / 1,023 (...)" tiene una coma adentro de las comillas
+				    #"Encabezados promovidos" = Table.PromoteHeaders(Origen, [PromoteAllScalars=true]),
+				    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"Anio", Int64.Type}, {"Mes", Int64.Type}, {"Fuente", type text}}),
+				    // El CSV usa punto decimal: se convierte con Inglés (EE.UU.) para que 16939.5 no se lea como 169395
+				    #"DQ-45 Índice con punto decimal" = Table.TransformColumnTypes(#"Tipo cambiado", {{"Indice_CAC", type number}}, "en-US"),
+				    // Primer día del mes, para cruzar con Obras[Mes base CAC] y con el calendario
+				    #"DQ-28 Período" = Table.AddColumn(#"DQ-45 Índice con punto decimal", "Período", each #date([Anio], [Mes], 1), type date)
+				in
+				    #"DQ-28 Período"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navegación
+

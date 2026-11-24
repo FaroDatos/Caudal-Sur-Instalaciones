@@ -1,0 +1,49 @@
+table proveedores
+	lineageTag: 483255f6-5a76-415f-a0ef-a99967ac05ba
+
+	column ID_Proveedor
+		dataType: string
+		lineageTag: 05f0fbd9-5b21-4729-a26c-ba624b6011f6
+		summarizeBy: none
+		sourceColumn: ID_Proveedor
+
+		annotation SummarizationSetBy = Automatic
+
+	column Proveedor
+		dataType: string
+		lineageTag: 2fe0ed6b-61b2-4a27-99aa-9dd1bd5f9acd
+		summarizeBy: none
+		sourceColumn: Proveedor
+
+		annotation SummarizationSetBy = Automatic
+
+	column ID_Rubro_Principal
+		dataType: string
+		lineageTag: 71afead2-9de5-45c0-b7d4-166dc5f4137a
+		summarizeBy: none
+		sourceColumn: ID_Rubro_Principal
+
+		annotation SummarizationSetBy = Automatic
+
+	column Localidad
+		dataType: string
+		lineageTag: ff2c16ba-3a9c-4601-8103-4c8bce80ecaf
+		summarizeBy: none
+		sourceColumn: Localidad
+
+		annotation SummarizationSetBy = Automatic
+
+	partition proveedores = m
+		mode: import
+		source =
+				let
+				    Origen = Csv.Document(File.Contents("F:\FaroDatos\Proyecyos Portfolio\Caudal Sur Instalaciones SRL\Datos crudos\proveedores.csv"),[Delimiter=",", Columns=4, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    #"DQ-48 Encabezados promovidos" = Table.PromoteHeaders(Origen, [PromoteAllScalars=true]),
+				    #"Tipo cambiado" = Table.TransformColumnTypes(#"DQ-48 Encabezados promovidos",{{"ID_Proveedor", type text}, {"Proveedor", type text}, {"ID_Rubro_Principal", type text}, {"Localidad", type text}})
+				in
+				    #"Tipo cambiado"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navegación
+

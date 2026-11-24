@@ -1,0 +1,80 @@
+table gastos_sistema
+	lineageTag: ec13450c-31ef-42a9-8d43-d7ccd2bd9439
+
+	column 'Nro Comprobante'
+		dataType: string
+		lineageTag: 379538c0-3725-45ca-96c0-beb0cd62db90
+		summarizeBy: none
+		sourceColumn: Nro Comprobante
+
+		annotation SummarizationSetBy = Automatic
+
+	column Fecha
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 6b27f331-7619-4c5a-a1c8-9194ff93fc0f
+		summarizeBy: none
+		sourceColumn: Fecha
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Cod Obra'
+		dataType: string
+		lineageTag: aa21e422-fd4f-4d12-ba4f-29bd468c1304
+		summarizeBy: none
+		sourceColumn: Cod Obra
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Tipo Comprobante'
+		dataType: string
+		lineageTag: 90d80696-e8ad-4d05-b144-e833b67d6c3f
+		summarizeBy: none
+		sourceColumn: Tipo Comprobante
+
+		annotation SummarizationSetBy = Automatic
+
+	column Importe
+		dataType: double
+		formatString: \$ #,0
+		lineageTag: a53f5a39-05e7-4563-8990-45f86b51812c
+		summarizeBy: sum
+		sourceColumn: Importe
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column ID_Rubro
+		dataType: string
+		lineageTag: 52ea9d0a-e96e-45e5-a23e-1391c126ef69
+		summarizeBy: none
+		sourceColumn: ID_Rubro
+
+		annotation SummarizationSetBy = Automatic
+
+	column ID_Proveedor
+		dataType: string
+		lineageTag: 1d93784b-72eb-4e40-915f-afc3196bbd69
+		summarizeBy: none
+		sourceColumn: ID_Proveedor
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gastos_sistema = m
+		mode: import
+		source =
+				let
+				    Origen = gastos_base,
+				    // Solo comprobantes sin observaciones. Los que tienen problemas están en Gastos_Observados (DQ-07, DQ-09, DQ-13)
+				    #"Solo filas válidas" = Table.SelectRows(Origen, each [Motivo observación] = null),
+				    #"Columnas finales" = Table.SelectColumns(#"Solo filas válidas", {"Nro Comprobante", "Fecha", "Cod Obra", "ID_Rubro", "ID_Proveedor", "Tipo Comprobante", "Importe"})
+				in
+				    #"Columnas finales"
+
+	annotation PBI_NavigationStepName = Navegación
+
+	annotation PBI_ResultType = Table
+

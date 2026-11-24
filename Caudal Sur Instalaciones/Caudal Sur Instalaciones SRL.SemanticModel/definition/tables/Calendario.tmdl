@@ -1,0 +1,114 @@
+/// Tabla de fechas compartida. Cubre años completos desde el primer gasto hasta la última fecha de obra o cobro.
+table Calendario
+	lineageTag: 35fea0fe-048c-402d-b816-ffb2bf985074
+	dataCategory: Time
+
+	column Fecha
+		dataType: dateTime
+		isUnique
+		isKey
+		formatString: dd/mm/yyyy
+		lineageTag: 8802091c-e5a7-4296-bb06-ee3567806b5a
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Fecha]
+
+	column Año
+		dataType: int64
+		formatString: 0
+		lineageTag: 50534dee-c13d-4099-b52a-4cb8209bc90e
+		summarizeBy: none
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Año]
+
+	column Trimestre
+		dataType: string
+		lineageTag: d93f2425-18c7-4691-b635-0d95d2ef7aea
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Trimestre]
+
+	column 'Mes número'
+		dataType: int64
+		isHidden
+		lineageTag: 43d0b423-635f-44d2-ab41-c6773881fdd4
+		summarizeBy: none
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Mes número]
+
+	column Mes
+		dataType: string
+		lineageTag: 71b38638-8f60-48af-a67a-c5f9f375d2d3
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Mes]
+		sortByColumn: 'Mes número'
+
+	column Año-mes
+		dataType: string
+		lineageTag: 2ff4a52c-02e5-4ab1-b6b2-28f7d96d6ecf
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Año-mes]
+		sortByColumn: 'Año-mes orden'
+
+	column 'Año-mes orden'
+		dataType: int64
+		isHidden
+		lineageTag: 3997142c-d6dc-4181-8f98-af1a4d796702
+		summarizeBy: none
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Año-mes orden]
+
+	column 'Inicio de mes'
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		lineageTag: 1102e7be-ced0-4876-929a-7ed9b66f26a2
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Inicio de mes]
+
+	column 'Día de la semana'
+		dataType: string
+		lineageTag: 531740de-1f55-457c-a29f-950c6981af4a
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Día de la semana]
+		sortByColumn: 'Día semana número'
+
+	column 'Día semana número'
+		dataType: int64
+		isHidden
+		lineageTag: 8d22a136-fd81-4f75-b58f-5746774d0803
+		summarizeBy: none
+		isNameInferred
+		isDataTypeInferred
+		sourceColumn: [Día semana número]
+
+	partition Calendario = calculated
+		mode: import
+		source = ```
+				
+				VAR _min = MIN ( gastos_sistema[Fecha] )
+				VAR _max = MAX ( MAX ( Obras[Fin previsto] ), MAX ( Certificaciones[Fecha cobro] ) )
+				VAR _dias = CALENDAR ( DATE ( YEAR ( _min ), 1, 1 ), DATE ( YEAR ( _max ), 12, 31 ) )
+				RETURN
+				    SELECTCOLUMNS (
+				        _dias,
+				        "Fecha", [Date],
+				        "Año", YEAR ( [Date] ),
+				        "Trimestre", "T" & QUARTER ( [Date] ),
+				        "Mes número", MONTH ( [Date] ),
+				        "Mes", VAR _m = FORMAT ( [Date], "mmmm", "es-AR" ) RETURN UPPER ( LEFT ( _m, 1 ) ) & MID ( _m, 2, 20 ),
+				        "Año-mes", LEFT ( FORMAT ( [Date], "mmmm", "es-AR" ), 3 ) & "-" & FORMAT ( [Date], "yy" ),
+				        "Año-mes orden", YEAR ( [Date] ) * 100 + MONTH ( [Date] ),
+				        "Inicio de mes", DATE ( YEAR ( [Date] ), MONTH ( [Date] ), 1 ),
+				        "Día de la semana", VAR _d = FORMAT ( [Date], "dddd", "es-AR" ) RETURN UPPER ( LEFT ( _d, 1 ) ) & MID ( _d, 2, 20 ),
+				        "Día semana número", WEEKDAY ( [Date], 2 )
+				    )
+				
+				```
+
